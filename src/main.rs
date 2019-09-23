@@ -1,4 +1,9 @@
 use std::env;
+use std::path::Path;
+use std::fs;
+
+#[macro_use]
+extern crate json;
 
 
 fn main() {
@@ -26,11 +31,27 @@ fn main() {
 }
 
 fn display_help() {
-
+    println!("Available arguments: help, create, remove. Type the name of the bookmark as an argument to be taken to that directory.")
 }
 
 fn create_bookmark(args: &Vec<String>) {
-
+    if args.len() < 4 {
+        println!("Please provide a name for the directory bookmark as well as a valid path.")
+    } else {
+        let bookmark_name = &args[2];
+        let bookmark_dir = Path::new(&args[3]);
+        if bookmark_dir.is_dir() != true {
+            println!("Please provide a valid directory path.")
+        } else {
+            let bkmrks = fs::read("cdd.json");
+            match bkmrks {
+                Ok(f) => {
+                },
+                Err(e) => {
+                },
+            }
+        }
+    }
 }
 
 fn remove_bookmark(args: &Vec<String>) {
