@@ -1,6 +1,7 @@
 use std::env;
 use std::path::Path;
 use std::fs;
+use std::io::{ErrorKind};
 
 #[macro_use]
 extern crate json;
@@ -43,13 +44,7 @@ fn create_bookmark(args: &Vec<String>) {
         if bookmark_dir.is_dir() != true {
             println!("Please provide a valid directory path.")
         } else {
-            let bkmrks = fs::read("cdd.json");
-            match bkmrks {
-                Ok(f) => {
-                },
-                Err(e) => {
-                },
-            }
+            let mut bookmarks = check_for_file("create");
         }
     }
 }
@@ -62,3 +57,26 @@ fn change_dir(args: &Vec<String>) {
 //                println!("Please provide a valid subcommand. Use 'help' for usage information.")
 }
 
+fn check_for_file(operation: &str) -> fs::File {
+    let mut bookmarks = fs::File::open("cdd.json");
+    match bookmarks {
+        Ok(f) => {
+            return f
+        },
+        Err(e) => {
+            match e {
+                NotFound => {
+                    if operation == "create" {
+                        let mut bookmarks = fs::File::create("cdd.json");
+                        return bookmarks.unwrap()
+                    } else {
+                        panic!("Bookmark file not found. Please run with the create command to create a new one.")
+                    }
+                },
+                _ => {
+                    panic!("Encountered error: {:?}", e);
+                },
+            }
+        },
+    }
+}
