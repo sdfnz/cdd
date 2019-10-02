@@ -1,7 +1,7 @@
 use std::env;
 use std::path::Path;
 use std::fs;
-use std::io::Read;
+use std::io::{Read, Write, ErrorKind};
 
 
 fn main() {
@@ -41,27 +41,43 @@ fn create_bookmark(args: &Vec<String>) {
             println!("Please provide a valid directory path.")
         } else {
             let bookmark_name = &args[2];
-            let mut bookmarks = fs::OpenOptions::new()
-                                    .read(true)
-                                    .append(true)
-                                    .create(true)
-                                    .open("cdd.txt");
+            let bookmarks = fs::File::open("cdd.txt");
             match bookmarks {
                 Ok(mut file) => {
-                    modify_or_add(file, bookmark_name, bookmark_dir);
+                    let mut contents = String::new();
+                    file.read_to_string(&mut contents);
+                    add_bookmark(contents.as_str(), bookmark_name, bookmark_dir);
                 },
                 Err(e) => {
-                    println!("Encountered error opening file: {:?}", e);
+                    match e.kind() {
+                        ErrorKind::NotFound => {
+                            let mut contents = "";
+                            add_bookmark(contents, bookmark_name, bookmark_dir);
+                        },
+                        _ => {
+                            println!("Encountered error opening file: {:?}", e);
+                        },
+                    }
                 },
             }
         }
     }
 }
 
-fn modify_or_add(mut file: fs::File, bname: &str, bdir: &Path) {
-    let mut contents = String::new();
-    file.read_to_string(&mut contents);
-    println!("{:?}", contents);
+fn add_bookmark(mut contents: &str, bname: &str, bdir: &Path) {
+    let mut file = fs::File::create("cdd.txt").expect("Unable to create file.");
+    let lines: Vec<&str> = contents.split(';').collect();
+    println!("{:?}", lines);
+    for l in lines.into_iter() {
+        if l.contains(bname) {
+            println!("Replacing directory for bookmark: {:?}", bname);
+        } else if l == "" {
+        } else {
+            write!(file, "{b};", b=l);
+        }
+    }
+    let new_bookmark = format!("\r\n{name}@{dir};", name=bname, dir=bdir.display());
+    write!(file, "{b}", b=new_bookmark);
 }
 
 fn remove_bookmark(args: &Vec<String>) {
