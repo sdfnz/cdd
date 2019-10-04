@@ -85,5 +85,34 @@ fn remove_bookmark(args: &Vec<String>) {
 }
 
 fn change_dir(args: &Vec<String>) {
-//                println!("Please provide a valid subcommand. Use 'help' for usage information.")
+    let directory = Path::new(&args[1]);
+    if directory.is_dir() == true {
+       env::set_var("CD_PATH", args[1].as_str()); 
+    } else {
+        let bookmark_name = &args[1].as_str();
+        let bookmarks = fs::File::open("cdd.txt");
+        match bookmarks {
+            Ok(mut file) => {
+                let mut contents = String::new();
+                file.read_to_string(&mut contents);
+                let lines: Vec<&str> = contents.split(';').collect();
+                let mut destination = ".";
+                for l in lines.into_iter() {
+                    if l.contains(bookmark_name) {
+                        let d: Vec<&str> = l.split('@').collect();
+                        destination = d[1];
+                    }
+                }
+                if destination == "." {
+                    println!("Please provide a valid bookmark, directory, or subcommand.");
+                    env::set_var("CD_PATH", destination);
+                } else {
+                    env::set_var("CD_PATH", destination);
+                }
+            },
+            Err(e) => {
+                println!("Encountered error opening file: {:?}", e);
+            },
+        }
+    }
 }
