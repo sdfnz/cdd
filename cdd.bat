@@ -1,3 +1,5 @@
 @echo off
-cdd.exe %*
+CALL cdd.exe %*
+CALL setDir.bat
+del setDir.bat
 cd %CD_PATH%

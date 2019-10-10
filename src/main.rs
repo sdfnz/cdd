@@ -73,11 +73,11 @@ fn add_bookmark(mut contents: &str, bname: &str, bdir: &Path) {
             println!("Replacing directory for bookmark: {:?}", bname);
         } else if l == "" {
         } else {
-            write!(file, "{b};", b=l);
+            write!(file, "{b};", b=l).expect("Invalid write.");
         }
     }
     let new_bookmark = format!("\r\n{name}@{dir};", name=bname, dir=bdir.display());
-    write!(file, "{b}", b=new_bookmark);
+    write!(file, "{b}", b=new_bookmark).expect("Invalid write.");
 }
 
 fn remove_bookmark(args: &Vec<String>) {
@@ -87,7 +87,8 @@ fn remove_bookmark(args: &Vec<String>) {
 fn change_dir(args: &Vec<String>) {
     let directory = Path::new(&args[1]);
     if directory.is_dir() == true {
-       env::set_var("CD_PATH", args[1].as_str()); 
+        let mut bat = fs::File::create("setDir.bat").expect("Unable to create file.");
+        write!(bat, "SET CD_PATH=\"{d}\"", d=directory.display()).expect("Invalid write.");
     } else {
         let bookmark_name = &args[1].as_str();
         let bookmarks = fs::File::open("cdd.txt");
@@ -105,9 +106,11 @@ fn change_dir(args: &Vec<String>) {
                 }
                 if destination == "." {
                     println!("Please provide a valid bookmark, directory, or subcommand.");
-                    env::set_var("CD_PATH", destination);
+                    let mut bat = fs::File::create("setDir.bat").expect("Unable to create file.");
+                    write!(bat, "SET CD_PATH=\"{d}\"", d=destination).expect("Invalid write.");
                 } else {
-                    env::set_var("CD_PATH", destination);
+                    let mut bat = fs::File::create("setDir.bat").expect("Unable to create file.");
+                    write!(bat, "SET CD_PATH=\"{d}\"", d=destination).expect("Invalid write.");
                 }
             },
             Err(e) => {
