@@ -81,7 +81,31 @@ fn add_bookmark(mut contents: &str, bname: &str, bdir: &Path) {
 }
 
 fn remove_bookmark(args: &Vec<String>) {
-
+    if args.len() < 3 {
+        println!("Please provide the name of a bookmark to delete.");
+    } else {
+        let bookmark_name = &args[2];
+        let bookmarks = fs::File::open("cdd.txt");
+        match bookmarks {
+            Ok(mut file) => {
+                let mut contents = String::new();
+                file.read_to_string(&mut contents);
+                let lines: Vec<&str> = contents.as_str().split(';').collect();
+                let mut new_file = fs::File::create("cdd.txt").expect("Unable to create file.");
+                for l in lines.into_iter() {
+                    if l.contains(bookmark_name) {
+                        println!("Bookmark removed");
+                    } else if l == "" {
+                    } else {
+                        write!(new_file, "{b};", b=l).expect("Invalid write.");
+                    }
+                }
+            },
+            Err(e) => {
+                println!("Encountered error opening file: {:?}", e);
+            },
+        }
+    }
 }
 
 fn change_dir(args: &Vec<String>) {
