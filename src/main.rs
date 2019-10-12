@@ -8,7 +8,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() <= 1 {
-        println!("Please provide a subcommand and arguments. Use 'help' for usage information."); 
+        println!("Please provide a directory or a subcommand and arguments. Use 'help' for usage information."); 
     } else {
         match args[1].to_ascii_lowercase().as_str() {
             "help" => {
@@ -25,7 +25,6 @@ fn main() {
             },
         }
     }
-    println!("Arguments provided: {:?}", args);
 }
 
 fn display_help() {
@@ -67,7 +66,6 @@ fn create_bookmark(args: &Vec<String>) {
 fn add_bookmark(mut contents: &str, bname: &str, bdir: &Path) {
     let mut file = fs::File::create("cdd.txt").expect("Unable to create file.");
     let lines: Vec<&str> = contents.split(';').collect();
-    println!("{:?}", lines);
     for l in lines.into_iter() {
         if l.contains(bname) {
             println!("Replacing directory for bookmark: {:?}", bname);
