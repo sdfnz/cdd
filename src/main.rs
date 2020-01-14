@@ -2,6 +2,7 @@ use std::env;
 use std::path::Path;
 use std::fs;
 use std::io::{Read, Write, ErrorKind};
+use serde_json::{Result, Value, json};
 
 
 fn main() {
@@ -40,7 +41,7 @@ fn create_bookmark(args: &Vec<String>) {
             println!("Please provide a valid directory path.")
         } else {
             let bookmark_name = &args[2];
-            let bookmarks = fs::File::open("cdd.txt");
+            let bookmarks = fs::File::open("cdd.json");
             match bookmarks {
                 Ok(mut file) => {
                     let mut contents = String::new();
@@ -50,8 +51,11 @@ fn create_bookmark(args: &Vec<String>) {
                 Err(e) => {
                     match e.kind() {
                         ErrorKind::NotFound => {
-                            let mut contents = "";
-                            add_bookmark(contents, bookmark_name, bookmark_dir);
+                            let mut m = serde_json::map::Map::new();
+                            m.insert(bookmark_name.to_string(), json!(bookmark_dir.to_str()));
+                            let mut contents = serde_json::to_string(&m)
+                                .expect("Invalid value.");
+                            add_bookmark(&contents, bookmark_name, bookmark_dir);
                         },
                         _ => {
                             println!("Encountered error opening file: {:?}", e);
@@ -64,18 +68,17 @@ fn create_bookmark(args: &Vec<String>) {
 }
 
 fn add_bookmark(mut contents: &str, bname: &str, bdir: &Path) {
-    let mut file = fs::File::create("cdd.txt").expect("Unable to create file.");
-    let lines: Vec<&str> = contents.split(';').collect();
-    for l in lines.into_iter() {
-        if l.contains(bname) {
-            println!("Replacing directory for bookmark: {:?}", bname);
-        } else if l == "" {
-        } else {
-            write!(file, "{b};", b=l).expect("Invalid write.");
-        }
-    }
-    let new_bookmark = format!("\r\n{name}@{dir};", name=bname, dir=bdir.display());
-    write!(file, "{b}", b=new_bookmark).expect("Invalid write.");
+    let mut file = fs::File::create("cdd.json")
+        .expect("Unable to create file.");
+    let mut deser_file: Value = serde_json::from_str(contents)
+        .expect("Unable to deserialize file.");
+    let mut bkmk_JSON = deser_file.as_object_mut()
+        .expect("Unable to convert to object.");
+    bkmk_JSON.insert(bname.to_string(), json!(bdir.to_str()));
+    let new_bookmarks = serde_json::to_string_pretty(&bkmk_JSON)
+        .expect("Unable to serialize.");
+    write!(file, "{b}", b=new_bookmarks)
+        .expect("Invalid write.");
 }
 
 fn remove_bookmark(args: &Vec<String>) {
@@ -83,21 +86,19 @@ fn remove_bookmark(args: &Vec<String>) {
         println!("Please provide the name of a bookmark to delete.");
     } else {
         let bookmark_name = &args[2];
-        let bookmarks = fs::File::open("cdd.txt");
+        let mut bookmarks = fs::File::open("cdd.json");
         match bookmarks {
             Ok(mut file) => {
                 let mut contents = String::new();
                 file.read_to_string(&mut contents);
-                let lines: Vec<&str> = contents.as_str().split(';').collect();
-                let mut new_file = fs::File::create("cdd.txt").expect("Unable to create file.");
-                for l in lines.into_iter() {
-                    if l.contains(bookmark_name) {
-                        println!("Bookmark removed");
-                    } else if l == "" {
-                    } else {
-                        write!(new_file, "{b};", b=l).expect("Invalid write.");
-                    }
-                }
+                let mut deser_file: Value = serde_json::from_str(&contents)
+                    .expect("Unable to deserialize file.");
+                let mut bkmk_JSON = deser_file.as_object_mut()
+                    .expect("Unable to convert to object.");
+                bkmk_JSON.remove(bookmark_name);
+                let new_bookmarks = serde_json::to_string_pretty(&bkmk_JSON)
+                    .expect("Unable to serialize.");
+                fs::write("cdd.json", &new_bookmarks);
             },
             Err(e) => {
                 println!("Encountered error opening file: {:?}", e);
@@ -109,30 +110,36 @@ fn remove_bookmark(args: &Vec<String>) {
 fn change_dir(args: &Vec<String>) {
     let directory = Path::new(&args[1]);
     if directory.is_dir() == true {
-        let mut bat = fs::File::create("setDir.bat").expect("Unable to create file.");
-        write!(bat, "SET CD_PATH=\"{d}\"", d=directory.display()).expect("Invalid write.");
+        let mut bat = fs::File::create("setDir.bat")
+            .expect("Unable to create file.");
+        write!(bat, "SET CD_PATH=\"{d}\"", d=directory.display())
+            .expect("Invalid write.");
     } else {
         let bookmark_name = &args[1].as_str();
-        let bookmarks = fs::File::open("cdd.txt");
+        let bookmarks = fs::File::open("cdd.json");
         match bookmarks {
             Ok(mut file) => {
                 let mut contents = String::new();
                 file.read_to_string(&mut contents);
-                let lines: Vec<&str> = contents.split(';').collect();
-                let mut destination = ".";
-                for l in lines.into_iter() {
-                    if l.contains(bookmark_name) {
-                        let d: Vec<&str> = l.split('@').collect();
-                        destination = d[1];
-                    }
-                }
-                if destination == "." {
-                    println!("Please provide a valid bookmark, directory, or subcommand.");
-                    let mut bat = fs::File::create("setDir.bat").expect("Unable to create file.");
-                    write!(bat, "SET CD_PATH=\"{d}\"", d=destination).expect("Invalid write.");
-                } else {
-                    let mut bat = fs::File::create("setDir.bat").expect("Unable to create file.");
-                    write!(bat, "SET CD_PATH=\"{d}\"", d=destination).expect("Invalid write.");
+                let mut deser_file: Value = serde_json::from_str(&contents)
+                    .expect("Unable to deserialize file.");
+                let mut bkmk_JSON = deser_file.as_object_mut()
+                    .expect("Unable to convert to object.");
+                let destination = bkmk_JSON.get(&bookmark_name.to_string());
+                match destination {
+                    Some(dir) => {
+                        let mut bat = fs::File::create("setDir.bat")
+                            .expect("Unable to create file.");
+                        write!(bat, "SET CD_PATH={d}", d=dir)
+                            .expect("Invalid write.");
+                    },
+                    None => {
+                        println!("Please provide a valid bookmark, directory, or subcommand.");
+                        let mut bat = fs::File::create("setDir.bat")
+                            .expect("Unable to create file.");
+                        write!(bat, "SET CD_PATH=\"{d}\"", d=".")
+                            .expect("Invalid write.");
+                    },
                 }
             },
             Err(e) => {
